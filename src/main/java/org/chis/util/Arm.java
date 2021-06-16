@@ -24,7 +24,6 @@ public class Arm {
         double torque = Util.applyFrictions(motor.torque - grav, integrator.vel, 0.05, 0.04, 0.02, 0.001);
         // double torque = Util.applyFrictions(motor.torque - grav, integrator.vel, 0.0, 0.0, 0.0, 0.0);
         
-
         integrator.update(torque / I, dt);
         angle = integrator.pos;
 
