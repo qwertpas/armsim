@@ -1,5 +1,7 @@
 package org.chis.util;
 
+import org.chis.Constants;
+
 // Time-Corrected Verlet Integrator
 public class VerletIntegrator {
 
@@ -25,17 +27,18 @@ public class VerletIntegrator {
         // pos = pos_next;
         // dt_prev = dt;
 
+
+        vel += acc * dt;
+
         // if accel makes vel go past zero, then just make vel 0 to avoid friction vibrations
         // if(Math.signum(vel + acc * dt) != Math.signum(vel) && vel != 0){
         //     vel = 0;
         // }else{
         //     vel += acc * dt;
         // }
-
-        // if(Math.abs(vel) < 0.01){
-        //     vel = 0;
-        // }
-        vel += acc * dt;
+        if(Math.abs(vel) < Constants.FRIC_THRES){
+            vel = 0;
+        }
 
         pos += vel * dt;
     }

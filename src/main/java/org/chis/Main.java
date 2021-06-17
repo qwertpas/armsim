@@ -1,10 +1,12 @@
 package org.chis;
 
 import java.awt.Color;
+import java.awt.MouseInfo;
 
 import org.chis.util.Arm;
 import org.chis.util.GraphicDash;
 import org.chis.util.GraphicSim;
+import org.chis.util.Util.LooptimeMonitor;
 
 public class Main {
     public static Boolean paused = false;
@@ -14,9 +16,7 @@ public class Main {
     
     public static Arm arm;
 
-    public static final double PHYSICS_DT = 0.001;
-    public static final double DISPLAY_DT = 0.020;
-    public static final double USERCODE_DT = 0.020;
+    public static double target;
 
     public static void main(String[] args) throws InterruptedException {
 
@@ -25,26 +25,33 @@ public class Main {
 
 
         new DisplayThread();
-        new UserCodeThread();
 
         Thread.sleep(2000);
 
+        new InputThread();
+        new UserCodeThread();
+
 
         startTime = System.nanoTime();
-        while (true) {
 
+        LooptimeMonitor clock = new LooptimeMonitor();
+        while (true) {
+            clock.start();
             if(!paused){
                 elaspedTime = (System.nanoTime() - startTime) * 1e-9;
-                arm.update(PHYSICS_DT);
+                arm.update(Constants.PHYSICS_DT);
             }
-
+            clock.end();
             try {
-                Thread.sleep((int) (1000 * PHYSICS_DT));
+                double sleeptime = Math.max(0, Constants.PHYSICS_DT - clock.codetime); //in seconds
+                Thread.sleep((int) (sleeptime * 1000)); //in milliseconds
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
     }
+
+
 
     public static class DisplayThread implements Runnable{
         private boolean exit;
@@ -61,23 +68,24 @@ public class Main {
         public void run(){
             GraphicSim.init();
 
-
+            LooptimeMonitor clock = new LooptimeMonitor();
 
             while(!exit) {
                 if(!paused){
 
+                    clock.start();
                     angleGraph.putNumber("angle", arm.angle, Color.RED);
-                    angleGraph.putNumber("target", Math.toRadians(120), Color.BLUE);
+                    angleGraph.putNumber("target", Math.toRadians(getTargetDeg()), Color.BLUE);
 
 
                     GraphicSim.sim.repaint();
                     GraphicDash.paintAll();
-
+                    clock.end();
 
 
                 }
                 try{
-                    double sleeptime = Math.max(0, DISPLAY_DT); //in seconds
+                    double sleeptime = Math.max(0, Constants.DISPLAY_DT - clock.codetime); //in seconds
                     Thread.sleep((int) (sleeptime * 1000)); //in milliseconds
                 }catch(InterruptedException e){
                     e.printStackTrace();
@@ -87,6 +95,45 @@ public class Main {
         public void stop(){
             exit = true;
         }
+    }
+
+    public static class InputThread implements Runnable{
+        private boolean exit;
+        Thread t;
+        InputThread() {
+            t = new Thread(this, "Input");
+            System.out.println("New Thread: " + t);
+            exit = false;
+            t.start();
+        }
+
+        public void run(){
+            
+            LooptimeMonitor clock = new LooptimeMonitor();
+
+            while (!exit) {
+
+                clock.start();
+
+                target = -MouseInfo.getPointerInfo().getLocation().y;
+
+                clock.end();
+
+                try {
+                    double sleeptime = Math.max(0, Constants.INPUT_DT - clock.codetime); //in seconds
+                    Thread.sleep((int) (sleeptime * 1000)); //in milliseconds
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        public void stop(){
+            exit = true;
+        }
+    }
+
+    public static double getTargetDeg(){
+        return target;
     }
 
     public static class UserCodeThread implements Runnable{
@@ -104,14 +151,18 @@ public class Main {
 
             userCode.robotInit();
 
+            LooptimeMonitor clock = new LooptimeMonitor();
 
             while (!exit) {
 
+                clock.start();
                 userCode.teleopPeriodic();
+                clock.end();
 
                 try {
-                    Thread.sleep(20); // in milliseconds
-                } catch (InterruptedException e) {
+                    double sleeptime = Math.max(0, Constants.USERCODE_DT - clock.codetime); //in seconds
+                    Thread.sleep((int) (sleeptime * 1000)); //in milliseconds
+                } catch (Exception e) {
                     e.printStackTrace();
                 }
             }

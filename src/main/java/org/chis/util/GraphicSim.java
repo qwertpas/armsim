@@ -52,9 +52,9 @@ public class GraphicSim extends JPanel{
         g.fillOval(-10, -10, 20, 20);
         g.setColor(Color.BLUE);
 
-        g2d.rotate(Math.toRadians(120));
+        g2d.rotate(Math.toRadians(Main.getTargetDeg()));
         g.drawRect(-5, -5, 100, 10);
-        g2d.rotate(Math.toRadians(-120));
+        g2d.rotate(Math.toRadians(-Main.getTargetDeg()));
 
 
 

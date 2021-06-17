@@ -1,50 +1,63 @@
 package org.chis;
 
+
 import org.chis.util.CANSparkMax;
 import org.chis.util.CANSparkMax.MotorType;
+
 
 public class UserCode {
     
     CANSparkMax neo;
-    double prevDegrees;
+
+    double targetDeg, currentDeg, prevDeg = 0;
+
+    double kP = 0.02;
+    double kI = 0.4;
+    double kD = 0.0007;
+    double kFg = 0.03 * 9.8;
+    double dt = 0.02;
+
+    double error, prevError = targetDeg;
+    double P, I, D, Fg = 0;
 
     public void robotInit(){
         neo = new CANSparkMax(0, MotorType.kBrushless);
     }
 
     public void teleopPeriodic() {
+        targetDeg = Main.getTargetDeg();
+        currentDeg = convertToDegrees(neo.getPosition());
 
-        double degrees = convertToDegrees(neo.getPosition());
-        System.out.println("Deg:" + degrees);
+        error = targetDeg - currentDeg;
 
-        int targetDeg = 120;
+        P = kP * error;
 
-        // Mass is in kg
-        double armMass = 1;
-
-        // distance from 120 determines voltage
-        double distance = Math.abs(degrees-targetDeg);
-        double scale = 0.012;
-
-        double derivativeConst = 0.003;
-        double kv = derivativeConst*(-(degrees-prevDegrees)/0.02);
-
-        double gravConst = 0.03;
-        double gv = armMass*9.8*gravConst*Math.cos(Math.toRadians(degrees));
-
-        if (degrees > 120)
-            neo.set(-distance*scale + kv + gv);
-        else
-            neo.set(distance*scale + kv + gv);
-
-
-        prevDegrees = degrees;
         
+
+        D = kD * -(currentDeg - prevDeg) / dt;
+
+        if(Math.abs(error) < 5){
+            I += kI * error * dt;
+        }
+        if(Math.signum(error) != Math.signum(prevError)){
+            I = 0;
+        }
+
+        Fg = kFg * Math.cos(Math.toRadians(currentDeg));
+
+        double power = P  + I + D + Fg;
+
+        neo.set(power);
+
+        System.out.println("error:" + error);
+
+        prevDeg = currentDeg;
+        prevError = error;
     }
 
     public double convertToDegrees(double ticks) {
-        double ticksPerRev = 360/42.0;
-        int degrees = (int)(ticks*ticksPerRev) % 360;
+        double ticksPerRev = 42.0;
+        double degrees = ticks / ticksPerRev * 360.0;
         return degrees;
     }
 
